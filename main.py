@@ -1,5 +1,5 @@
 import secrets
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, HttpUrl
 from fastapi.responses import RedirectResponse
 
@@ -18,16 +18,24 @@ def home():
     return {"message": "URL Shortener API is running"}
 
 def generate_short_code():
-    return secrets.token_urlsafe(4)
+    secret_code = secrets.token_urlsafe(4)
+
+    while secret_code in url_database:
+        secret_code = secrets.token_urlsafe(4)
+        
+    return secret_code
 
 @app.post("/shorten")
-def shorten_url(request: URLRequest):
+def shorten_url(request: URLRequest, http_request: Request):
     short_code = generate_short_code()
     url_database[short_code] =  str(request.url)
 
+    short_url = str(http_request.base_url) + short_code
+
     return {
         "original_url": str(request.url),
-        "short_code": short_code
+        "short_code": short_code,
+        "short_url": short_url
     }
 
 @app.get("/{short_code}")
